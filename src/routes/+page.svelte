@@ -26,7 +26,7 @@
 	}
 </script>
 
-<div style="display:flex; flex-direction:column; height:80vh">
+<div id="app-container">
 	<div style="display:flex; flex-direction:column; align-items:center">
 		<!-- <label for="opening-search">Search for an opening: </label>
 		<input
@@ -66,28 +66,7 @@
 			{/each}
 		</select>
 	</div>
-	<div style="display: flex; justify-content:center; gap:4px; margin:4px 0px">
-		<button
-			disabled={moveIdx < 0}
-			onclick={() => {
-				const move = selectedOpening?.uci.at(moveIdx);
-				if (!move) return;
-				// TODO: just reverse the last move but keep track of taken pieces
-				board = newBoard();
-				selectedOpening?.uci.slice(0, moveIdx).forEach(applyMove);
-				moveIdx--;
-			}}>Prev</button
-		>
-		<button
-			disabled={!selectedOpening || moveIdx >= selectedOpening.uci.length - 1}
-			onclick={() => {
-				moveIdx++;
-				const move = selectedOpening?.uci.at(moveIdx);
-				if (!move) return;
-				applyMove(move);
-			}}>Next</button
-		>
-	</div>
+
 	<div id="board-container">
 		<div id="board">
 			<div>
@@ -138,6 +117,28 @@
 				<div></div>
 			{/each}
 		</div>
+	</div>
+	<div style="display: flex; justify-content:center; gap:4px; margin:4px 0px">
+		<button
+			disabled={moveIdx < 0}
+			onclick={() => {
+				const move = selectedOpening?.uci.at(moveIdx);
+				if (!move) return;
+				// TODO: just reverse the last move but keep track of taken pieces
+				board = newBoard();
+				selectedOpening?.uci.slice(0, moveIdx).forEach(applyMove);
+				moveIdx--;
+			}}>Prev</button
+		>
+		<button
+			disabled={!selectedOpening || moveIdx >= selectedOpening.uci.length - 1}
+			onclick={() => {
+				moveIdx++;
+				const move = selectedOpening?.uci.at(moveIdx);
+				if (!move) return;
+				applyMove(move);
+			}}>Next</button
+		>
 	</div>
 </div>
 
