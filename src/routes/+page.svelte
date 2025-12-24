@@ -28,7 +28,7 @@
 
 <div style="display:flex; flex-direction:column; height:80vh">
 	<div style="display:flex; flex-direction:column; align-items:center">
-		<label for="opening-search">Search for an opening: </label>
+		<!-- <label for="opening-search">Search for an opening: </label>
 		<input
 			id="opening-search"
 			oninput={(ev) => {
@@ -47,7 +47,7 @@
 			{#each byEco as [eco, { name }]}
 				<option value={eco}>{eco} {name}</option>
 			{/each}
-		</datalist>
+		</datalist> -->
 
 		<select
 			style:width="100%"
