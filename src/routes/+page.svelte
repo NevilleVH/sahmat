@@ -6,7 +6,8 @@
 		pieceImgs,
 		type Piece,
 		type Colour,
-		posEq
+		posEq,
+		type Position
 	} from '$lib/pieces';
 	import * as R from 'ramda';
 	import { type Move, openings } from '$lib/openings';
@@ -29,7 +30,35 @@
 		})
 	);
 
+	function getPiece({ row, col }: Position) {
+		return board[row][col];
+	}
+
+	function maybeCastle(move: Move) {
+		const { start, end } = move;
+		if (getPiece(start)?.tag !== 'king') {
+			return;
+		}
+		const d = end.col - start.col;
+		if (Math.abs(d) <= 1) {
+			return;
+		}
+		const castleEnd = {
+			row: start.row,
+			col: end.col - Math.sign(d)
+		};
+		const castleCol = Math.sign(d) > 0 ? 7 : 0;
+		applyMove({
+			start: {
+				row: start.row,
+				col: castleCol
+			},
+			end: castleEnd
+		});
+	}
+
 	function applyMove(move: Move) {
+		maybeCastle(move);
 		const { start, end } = move;
 		board[end.row][end.col] = board[start.row][start.col];
 		board[start.row][start.col] = null;
@@ -123,7 +152,12 @@
 							}}
 						>
 							{#if piece}
-								<img style="object-fit: cover;" height="100%" width="100%" src={pieceImgs[piece.colour][piece.tag]} />
+								<img
+									style="object-fit: cover;"
+									height="100%"
+									width="100%"
+									src={pieceImgs[piece.colour][piece.tag]}
+								/>
 							{/if}
 						</button>
 					</div>
