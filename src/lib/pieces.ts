@@ -69,12 +69,15 @@ export function posEq(p1: Position, p2: Position) {
 
 type PieceTag = "pawn" | "castle" | "knight" | "bishop" | "king" | "queen"
 
+let pieceIdCounter = 0;
+
 export abstract class Piece {
     abstract colour: Colour
     abstract position: Position
     abstract _possibleMoves(board: Board): Position[]
     public moves: Position[] = []
     abstract tag: PieceTag
+    public id: number = pieceIdCounter++
     //abstract img: string
     possibleMoves(board: Board): PositionDelta[] {
         const pms = this._possibleMoves(board)

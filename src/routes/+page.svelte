@@ -11,10 +11,21 @@
 	} from '$lib/pieces';
 	import * as R from 'ramda';
 	import { type Move, openings } from '$lib/openings';
+	import { flip } from 'svelte/animate';
+	import { fade } from 'svelte/transition';
+
 	let board = $state<Board>(newBoard());
 	let turn = $state<Colour>('white');
 	let selectedPiece = $state<Piece>();
 	let possibleMoves = $derived(selectedPiece?.possibleMoves(board));
+
+	let pieces = $derived(
+		board.flatMap((row, rowIdx) =>
+			row.map((piece, colIdx) =>
+				piece ? { piece, row: rowIdx, col: colIdx } : null
+			)
+		).filter(R.isNotNil)
+	);
 	// TODO: make move then show possible opening continuations/name
 
 	let selectedOpening = $state(openings[0]);
@@ -135,7 +146,6 @@
 			{#each { length: dimension } as _, row}
 				<div class="board-label">{dimension - row}</div>
 				{#each { length: dimension } as _, col}
-					{@const piece = board.at(row)?.at(col)}
 					<div class="square">
 						<button
 							style="height:100%;width:100%"
@@ -162,18 +172,22 @@
 								// }
 							}}
 						>
-							{#if piece}
-								<img
-									style="object-fit: cover;"
-									height="100%"
-									width="100%"
-									src={pieceImgs[piece.colour][piece.tag]}
-								/>
-							{/if}
 						</button>
 					</div>
 				{/each}
 				<div></div>
+			{/each}
+
+			{#each pieces as { piece, row, col } (piece.id)}
+				<img
+					class="piece"
+					animate:flip={{ duration: 300 }}
+					out:fade={{ duration: 400 }}
+					style:left="{(col + 1) * 10}vmin"
+					style:top="{(row + 1) * 10}vmin"
+					src={pieceImgs[piece.colour][piece.tag]}
+					alt="{piece.colour} {piece.tag}"
+				/>
 			{/each}
 		</div>
 	</div>
@@ -206,6 +220,7 @@
 		display: grid;
 		grid-template-columns: repeat(10, 10vmin);
 		grid-template-rows: repeat(10, 10vmin);
+		position: relative;
 	}
 	.square {
 		border: 1px solid black;
@@ -213,6 +228,13 @@
 	.board-label {
 		text-align: center;
 		align-content: center;
+	}
+	.piece {
+		position: absolute;
+		width: 10vmin;
+		height: 10vmin;
+		object-fit: cover;
+		pointer-events: none;
 	}
 	#board-container {
 		display: flex;
