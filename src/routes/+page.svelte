@@ -8,17 +8,27 @@
 		type Colour,
 		posEq
 	} from '$lib/pieces';
-	import { byEco, type Move, ecoCodes } from '$lib/openings';
+	import * as R from 'ramda';
+	import { type Move, openings } from '$lib/openings';
 	let board = $state<Board>(newBoard());
-
 	let turn = $state<Colour>('white');
 	let selectedPiece = $state<Piece>();
 	let possibleMoves = $derived(selectedPiece?.possibleMoves(board));
 	// TODO: make move then show possible opening continuations/name
-	let selectedCode = $state(ecoCodes[0]);
-	let selectedOpening = $derived(byEco.get(selectedCode));
+
+	let selectedOpening = $state(openings[0]);
 	let moveIdx = $state(-1);
 	let currentMove = $derived(selectedOpening?.uci[moveIdx]);
+
+	let codeFilter = $state('');
+	let nameFilter = $state('');
+	const includes = R.on(R.includes, R.toLower);
+	let filteredEcos = $derived(
+		openings.filter(({ name, eco }) => {
+			return includes(codeFilter, eco) && includes(nameFilter, name)
+		})
+	);
+
 	function applyMove(move: Move) {
 		const { start, end } = move;
 		board[end.row][end.col] = board[start.row][start.col];
@@ -28,43 +38,39 @@
 
 <div id="app-container">
 	<div style="display:flex; flex-direction:column; align-items:center">
-		<!-- <label for="opening-search">Search for an opening: </label>
-		<input
-			id="opening-search"
-			oninput={(ev) => {
-				const code = ev.currentTarget.value;
-				console.log(code);
-
-				if (byEco.get(code)) {
-					selectedCode = code;
-				}
-			}}
-			style:width="100%"
-			list="openings"
-		/>
-
-		<datalist id="openings">
-			{#each byEco as [eco, { name }]}
-				<option value={eco}>{eco} {name}</option>
-			{/each}
-		</datalist> -->
-
-		<select
-			style:width="100%"
-			value={selectedCode}
-			onchange={({ currentTarget }) => {
-				const opening = byEco.get(currentTarget.value);
-				if (opening) {
-					selectedOpening = opening;
-					board = newBoard();
-					moveIdx = -1;
-				}
-			}}
-		>
-			{#each byEco as [eco, { name }]}
-				<option value={eco}>{eco} {name}</option>
-			{/each}
-		</select>
+		<div>
+			<div  style="text-align: center; margin-bottom: 8px; display:flex; flex-direction:column">
+				<label>
+					Filter code:
+					<input
+						oninput={(ev) => {
+							codeFilter = ev.currentTarget.value;
+						}}
+					/>
+				</label>
+				<label>
+					Filter name:
+					<input
+						oninput={(ev) => {
+							nameFilter = ev.currentTarget.value;
+						}}
+					/>
+				</label>
+			</div>
+			<div id="opening-select">
+				{#each filteredEcos as opening}
+					<button style:background={R.equals(opening, selectedOpening) ? 'lightblue' : 'aliceblue'} style="border: 1px solid;" onclick={() => (selectedOpening = opening)}>{opening.eco} {opening.name}</button>
+				{/each}
+			</div>
+			<div>
+				<div style="text-align: center; margin-top: 8px">
+					<strong>
+					Selected: {selectedOpening.eco}
+					{selectedOpening.name}<br>{selectedOpening.pgn}
+					</strong>
+				</div>
+			</div>
+		</div>
 	</div>
 
 	<div id="board-container">
@@ -118,7 +124,7 @@
 			{/each}
 		</div>
 	</div>
-	<div style="display: flex; justify-content:center; gap:4px; margin:4px 0px">
+	<div style="display: flex; justify-content:center; gap:4px">
 		<button
 			disabled={moveIdx < 0}
 			onclick={() => {
@@ -160,5 +166,11 @@
 		justify-content: center;
 		align-items: center;
 		flex-grow: 1;
+	}
+	#opening-select {
+		height: 20vh;
+		overflow-y: scroll;
+		display: flex;
+		flex-direction: column;
 	}
 </style>

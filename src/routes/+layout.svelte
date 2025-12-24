@@ -8,4 +8,14 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
+
 {@render children()}
+
+<style >
+  :global(html), :global(body) {
+	background-color: aliceblue;
+    /* min-height: 100vh; */
+  }
+
+  
+</style>
