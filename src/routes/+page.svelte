@@ -57,8 +57,19 @@
 		});
 	}
 
+	function maybeEnPassant({start,end}: Move) {
+		if (getPiece(start)?.tag !== "pawn") {
+			return
+		}
+		if (start.col === end.col || getPiece(end)) {
+			return
+		} 
+		board[start.row][end.col] = null
+	}
+
 	function applyMove(move: Move) {
 		maybeCastle(move);
+		maybeEnPassant(move);
 		const { start, end } = move;
 		board[end.row][end.col] = board[start.row][start.col];
 		board[start.row][start.col] = null;
