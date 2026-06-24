@@ -12,7 +12,7 @@ type Trie = Record<string, Node>
 
 export function buildTrie(ops: Opening[]) {
     let t: Trie = {}
-    ops.forEach(opening => {
+    ops.toSorted((o1, o2) => o1.uci.length > o2.uci.length ? 1 : -1).forEach(opening => {
         addNodes(t, opening)
     })
     return t
