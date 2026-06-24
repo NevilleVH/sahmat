@@ -7,7 +7,10 @@
 		type Piece,
 		type Colour,
 		posEq,
-		type Position
+		type Position,
+		updateGame
+		getPiece
+
 	} from '$lib/pieces';
 	import * as R from 'ramda';
 	import { type Move, openings } from '$lib/openings';
@@ -41,50 +44,9 @@
 		})
 	);
 
-	function getPiece({ row, col }: Position) {
-		return board[row][col];
-	}
+	
 
-	function maybeCastle(move: Move) {
-		const { start, end } = move;
-		if (getPiece(start)?.tag !== 'king') {
-			return;
-		}
-		const d = end.col - start.col;
-		if (Math.abs(d) <= 1) {
-			return;
-		}
-		const castleEnd = {
-			row: start.row,
-			col: end.col - Math.sign(d)
-		};
-		const castleCol = Math.sign(d) > 0 ? 7 : 0;
-		applyMove({
-			start: {
-				row: start.row,
-				col: castleCol
-			},
-			end: castleEnd
-		});
-	}
-
-	function maybeEnPassant({start,end}: Move) {
-		if (getPiece(start)?.tag !== "pawn") {
-			return
-		}
-		if (start.col === end.col || getPiece(end)) {
-			return
-		} 
-		board[start.row][end.col] = null
-	}
-
-	function applyMove(move: Move) {
-		maybeCastle(move);
-		maybeEnPassant(move);
-		const { start, end } = move;
-		board[end.row][end.col] = board[start.row][start.col];
-		board[start.row][start.col] = null;
-	}
+	
 </script>
 
 <div id="app-container">
@@ -199,7 +161,7 @@
 				if (!move) return;
 				// TODO: just reverse the last move but keep track of taken pieces
 				board = newBoard();
-				selectedOpening?.uci.slice(0, moveIdx).forEach(applyMove);
+				selectedOpening?.uci.slice(0, moveIdx).forEach(updateGame);
 				moveIdx--;
 			}}>Prev</button
 		>
@@ -209,13 +171,19 @@
 				moveIdx++;
 				const move = selectedOpening?.uci.at(moveIdx);
 				if (!move) return;
-				applyMove(move);
+				updateGame(move);
 			}}>Next</button
 		>
 	</div>
 </div>
 
 <style>
+	/* #app-container {
+		height: 100vh;
+		display: flex;
+		flex-direction: column;
+		overflow: auto;
+	} */
 	#board {
 		display: grid;
 		grid-template-columns: repeat(10, 10vmin);
@@ -241,6 +209,7 @@
 		justify-content: center;
 		align-items: center;
 		flex-grow: 1;
+		min-height: 0;
 	}
 	#opening-select {
 		height: 20vh;

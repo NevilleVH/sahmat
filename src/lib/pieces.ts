@@ -14,6 +14,37 @@ import imgBishopLight from "$lib/assets/bishop-l.png"
 import imgKnightLight from "$lib/assets/knight-l.png"
 import imgCastleLight from "$lib/assets/castle-l.png"
 import imgPawnLight from "$lib/assets/pawn-l.png"
+import type { Move } from "./openings"
+import { setResponse } from "@sveltejs/kit/node"
+
+function* iterPieces(board: Board) {
+    for (let row of board) {
+        for (let item of row) {
+            if (item) {
+                yield item
+            }
+        }
+    }
+}
+
+
+// may need IDs to identify if piece has moved
+function* getPieces(board: Board, colour: Colour, tag: PieceTag) {
+    for (let piece of iterPieces(board)) {
+        if (piece.colour === colour && piece.tag === tag) {
+            yield piece
+        }
+    }
+}
+
+export interface Game {
+    board: Board
+    moves: {
+        piece: Piece
+        start: Position
+        end: Position
+    }[]
+}
 
 export const pieceImgs: Record<Colour, Record<PieceTag, string>> = {
     black: {
@@ -54,6 +85,108 @@ export function posEq(p1: Position, p2: Position) {
     return p1.col === p2.col && p1.row === p2.row
 }
 
+
+
+function isCheck(colour: Colour, game: Game) {
+    const { board } = game
+    const pieces = board.flatMap(row => row.filter(R.isNotNil))
+
+    for (let piece of pieces) {
+        if (piece.colour === colour) {
+            continue
+        }
+        for (let pos of piece.possibleMoves(game)) {
+            const p = getPiece(board, pos)
+            if (p?.tag === "king" && p.colour === colour) {
+                return true
+            }
+        }
+    }
+
+}
+
+function maybeCastle(game: Game, move: Move) {
+    // just moves the castle: the king's move is the one encoded in the move list
+    const { start, end } = move;
+    if (getPiece(game.board, start)?.tag !== 'king') {
+        return game;
+    }
+    const d = end.col - start.col;
+    if (Math.abs(d) <= 1) {
+        return game;
+    }
+    const castleEnd = {
+        row: start.row,
+        col: end.col - Math.sign(d)
+    };
+    const castleCol = Math.sign(d) > 0 ? 7 : 0;
+
+    const board = copyBoard(game.board)
+
+
+
+    return applyMove(board, {
+        start: {
+            row: start.row,
+            col: castleCol
+        },
+        end: castleEnd // hmm this will append a move to game moves - not what we want
+    });
+}
+
+function maybeEnPassant(game: Game, { start, end }: Move): Game {
+    const piece = getPiece(game.board, start)
+    if (piece?.tag !== "pawn") {
+        return game
+    }
+    if (start.col === end.col || getPiece(game.board, end)) {
+        return game
+    }
+    const board = copyBoard(game.board)
+    // Take opposition piece
+    board[start.row][end.col] = null
+    return {
+        board,
+        moves: game.moves // move gets appended in applyMove
+    }
+}
+
+function copyBoard(board: Board) {
+    return board.map(r => [...r])
+}
+
+function setPosition(board: Board, pos: Position, piece: Piece | null) {
+    board[pos.row][pos.col] = piece
+    // TODO update piece position: but these needs to be immutable
+}
+
+function applyMove(board: Board, move: Move) {
+    const { start, end } = move;
+    const piece = board[start.row][start.col]
+    if (!piece) {
+        throw new Error(`nothing there: ${start.row} ${start.col}`)
+    }
+    setPosition(board, start, null)
+    setPosition(board, end, piece)
+    return piece
+}
+
+
+export function updateGame(game: Game, move: Move): Game {
+    game = maybeCastle(
+        maybeEnPassant(game, move), move);
+
+    const board = copyBoard(game.board)
+    const piece = applyMove(board, move)
+    // need to update instance positions
+    return {
+        board, moves: game.moves.concat({
+            piece,
+            ...move
+        })
+    }
+}
+
 // export function pieceImg(p: Piece) {
 //     R.cond([
 //         [R.is(Pawn), R.always(imgPawn)],
@@ -73,16 +206,26 @@ let pieceIdCounter = 0;
 
 export abstract class Piece {
     abstract colour: Colour
-    abstract position: Position
-    abstract _possibleMoves(board: Board): Position[]
-    public moves: Position[] = []
+    abstract _possibleMoves(game: Game): Position[]
     abstract tag: PieceTag
     public id: number = pieceIdCounter++
+
+    getPos(board: Board) {
+
+    }
     //abstract img: string
-    possibleMoves(board: Board): PositionDelta[] {
-        const pms = this._possibleMoves(board)
+    possibleMoves(game: Game): PositionDelta[] {
+        if (game.moves.at(-1)?.piece.colour === this.colour) {
+            return []
+        }
+        const pms = this._possibleMoves(game)
         return pms.filter(p => {
-            return inBounds(p) && board.at(p.row)?.at(p.col)?.colour !== this.colour
+            const next = updateGame(game, {
+                start: this.position,
+                end: p
+            })
+            return !isCheck(this.colour, next) && inBounds(p) &&
+                game.board.at(p.row)?.at(p.col)?.colour !== this.colour
         })
     }
 
@@ -113,8 +256,7 @@ const isEmpty = R.curry((board: Board, position: Position):boolean => {
     return !getPiece(board, position)
 })
 
-function getPiece(board: Board, position: Position): Piece | null {
-    console.log('piece', position,  board.at(position.row)?.at(position.col) )
+export function getPiece(board: Board, position: Position): Piece | null {
     return board.at(position.row)?.at(position.col) ?? null
 }
 
@@ -164,7 +306,7 @@ export class Pawn extends Piece {
     // get img() {
     //     return imgPawn
     // }
-    _possibleMoves(board: Board): PositionDelta[] {
+    _possibleMoves(game: Game): PositionDelta[] {
         // assume position is relative for now
         // const relativeRow = this.colour === "black" ? 
         // board.length - this.position.row
@@ -178,23 +320,39 @@ export class Pawn extends Piece {
         //             moves.push(p)
         //         })
         //     )
-        console.log('!', )
-        test(this.add({row: 1, col: 0}), isEmpty(board), p => {
+        test(this.add({ row: 1, col: 0 }), isEmpty(game.board), p => {
             moves.push(p)
         })
 
-        if (!this.moves.length) {
-            test(this.add({row: 2, col: 0}), isEmpty(board), p => {
+        if (!lastMove(this.id, game.moves)) {
+            test(this.add({ row: 2, col: 0 }), isEmpty(game.board), p => {
                 moves.push(p)
             })
         }
         
         const captures: Position[] = [{row: 1, col: 1}, {row: 1, col: -1}]
         captures.forEach(p => {
-            test(this.add(p), R.o(R.not, isEmpty(board)), p => {
+            // also check if it isn't your piece - this happens in Piece.possibleMoves
+            test(this.add(p), R.o(R.not, isEmpty(game.board)), p => {
                 moves.push(p)
             })
         })
+
+        // en passant
+        const prevMove = game.moves.at(-1)
+        if (!prevMove) {
+            return moves
+        }
+        const { end, piece, start } = prevMove
+
+        if (piece.tag === "pawn" && end.row - start.row > 1 &&
+            end.row == this.position.row && Math.abs(end.col - this.position.col) === 1) {
+            moves.push({
+                row: this.position.row + 1,
+                col: end.col
+            })
+            // TODO: when the move is applied, the piece must be taken
+        }
 
         return moves
     }
@@ -206,13 +364,17 @@ export class Bishop extends Piece {
         super()
     }
 
-    _possibleMoves(board: Board): Position[] {
+    _possibleMoves({ board }: Game): Position[] {
         
         return R.xprod([-1,1], [-1,1]).flatMap(([xd, yd]) => {
             const delta = {row: yd, col: xd}
             return takeUntilPiece(this.position, delta, board)
         })
     }
+}
+
+function lastMove(id: number, moves: Game["moves"]) {
+    return moves.findLast(({ piece }) => piece.id === id)
 }
 
 export class King extends Piece {
@@ -222,11 +384,35 @@ export class King extends Piece {
         super()
     }
 
-    _possibleMoves(board: Board): Position[] {
+    _possibleMoves({ board, moves }: Game): Position[] {
         const deltas = R.xprod([-1,0,1], [-1, 0, 1])
-        return deltas.map(([row, col]) => {
+        const positions = deltas.map(([row, col]) => {
             return this.add({row, col})
         })
+        if (!lastMove(this.id, moves)) {
+            const castles = getPieces(board, this.colour, "castle")
+            for (let castle of castles) {
+                if (!lastMove(castle.id, moves)) {
+                    const unit = Math.sign(castle.position.col - this.position.col)
+                    let ok = true
+                    for (let x = this.position.col + 1; x !== castle.position.col; x += unit) {
+                        if (getPiece(board, { col: x, row: this.position.row })) {
+                            ok = false
+                            break
+                        }
+                    }
+                    if (ok) {
+                        // applyMove takes care of the castle position
+                        positions.push({
+                            row: this.position.row,
+                            col: this.position.col + unit * 2
+                        })
+                    }
+                }
+            }
+        }
+
+        return positions
     }
 }
 
@@ -236,7 +422,7 @@ export class Castle extends Piece {
         super()
     }
 
-    _possibleMoves(board: Board): Position[] {
+    _possibleMoves({ board }: Game): Position[] {
         const positions: Position[] = []
 
         for (let d of [-1, 1]) {
@@ -253,10 +439,10 @@ export class Queen extends Piece {
         super()
     }
 
-    _possibleMoves(board: Board): Position[] {
+    _possibleMoves(game: Game): Position[] {
         const c = new Castle(this.colour, this.position)
         const b = new Bishop(this.colour, this.position)
-        return c.possibleMoves(board).concat(b.possibleMoves(board))
+        return c.possibleMoves(game).concat(b.possibleMoves(game))
     }
 }
 
@@ -266,7 +452,7 @@ export class Knight extends Piece {
         super()
     }
 
-    _possibleMoves(board: Board): Position[] {
+    _possibleMoves({ board }: Game): Position[] {
         const deltas = [{row: 1, col: 2}, {row: 2, col: 1}]
         return R.xprod([-1, 1], ["row", "col"] as const).flatMap(([d, field, ]) => {
             return deltas.map(delta => this.add(R.modify(field, R.multiply(d), delta)))
