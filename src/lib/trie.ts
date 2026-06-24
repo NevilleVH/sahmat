@@ -1,4 +1,5 @@
 import { type Move, type Opening } from '$lib/openings';
+import type { Position } from './pieces';
 
 interface Node {
     name: string
@@ -17,8 +18,12 @@ export function buildTrie(ops: Opening[]) {
     return t
 }
 
+function positionLabel({ col, row }: Position) {
+    return String.fromCharCode(col + 97) + (8 - row)
+}
+
 export function moveLabel(m: Move) {
-        return String.fromCharCode(m.end.col + 97) + (8-m.end.row)
+    return `${positionLabel(m.start)}:${positionLabel(m.end)}`
 }
 
 function addNodes(t: Trie, opening: Opening) {
