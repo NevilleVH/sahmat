@@ -231,6 +231,7 @@
 	#move-selector {
 		display: flex;
 		flex-direction: column;
+        margin-top: 16px;
 	}
 
 	.move-button {
@@ -241,7 +242,7 @@
 	#board {
 		display: grid;
 		grid-template-columns: repeat(10, 10vmin);
-		grid-template-rows: repeat(10, 10vmin);
+		grid-template-rows: repeat(9, 10vmin);
 		position: relative;
 	}
 	.square {
