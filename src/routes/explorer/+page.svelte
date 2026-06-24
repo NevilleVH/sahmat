@@ -156,9 +156,9 @@
 		</div>
 	</div>
 	<div id="move-selector">
-        <div style="height: 16px;">
+        <div style="min-height: 16px; display:flex; gap:4px; flex-wrap:wrap">
             {#each moveList as move}
-                <span style:margin="0px 2px">{move}</span>
+                <span>{move}</span>
             {/each}
         </div>
         <div style="margin:16px 0px; display: flex; justify-content: center; gap:4px">
