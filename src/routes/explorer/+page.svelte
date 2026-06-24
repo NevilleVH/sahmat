@@ -14,7 +14,8 @@
 	import { flip } from 'svelte/animate';
 	import { fade } from 'svelte/transition';
 	import { buildTrie } from '$lib/trie';
-
+    // TODO: keep ref to root of trie so it doesn't have to be rebuilt each time
+    // TODO: add parent ref to make rewind more efficient
     // TODO: factor out board component
 
 	let board = $state<Board>(newBoard());
