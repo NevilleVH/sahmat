@@ -5,6 +5,7 @@ interface Node {
     name: string
     move: Move
     nodes: Trie
+    player_win?: number
 }
 
 type Trie = Record<string, Node>
@@ -31,7 +32,8 @@ function addNodes(t: Trie, opening: Opening) {
         const n: Node = t[moveLabel(m)] ??= {
             move: m,
             name: opening.name,
-            nodes: {}
+            nodes: {},
+            player_win: opening.player_win
         }
         t = n.nodes
     })

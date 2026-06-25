@@ -21,7 +21,8 @@ const openingSchema = z.object({
         return moves
     }), 
     eco: z.string(),
-    pgn: z.string()
+    pgn: z.string(),
+    player_win: z.coerce.number().optional()
 })
 const parsed = openingSchema.array().parse(rawOpenings)
 export type Opening = z.output<typeof openingSchema>

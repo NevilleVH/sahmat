@@ -197,7 +197,7 @@
 						trie = node.nodes;
 					}}
 				>
-					{`${key} (${node.name})`}
+					{`${key} - ${node.name} (${node.player_win ?? "unknown"}%)`}
 				</button>
 			{/each}
 		</div>
