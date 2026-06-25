@@ -7,7 +7,10 @@
    let title = $derived.by(() => {
 	
     const path = page.url.pathname.split("/").filter(Boolean);
-	path.unshift("Sahmat")
+	// Fix for github pages
+	if (path[0] !== "Sahmat") {
+		path.unshift("Sahmat")
+	}
     return path
       .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
       .join(' - ');
